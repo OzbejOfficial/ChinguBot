@@ -13,9 +13,11 @@
   "dependencies": {
     "@discordjs/builders": "^1.7.0",
     "@discordjs/rest": "^2.2.0",
+    "canvas": "^2.11.2",
     "discord.js": "^14.14.1",
     "dotenv": "^16.3.1",
     "dt-python-parser": "^0.9.0",
+    "fs": "^0.0.1-security",
     "mongoose": "^8.0.1",
     "node-cron": "^3.0.3",
     "nodemon": "^3.0.1",

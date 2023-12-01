@@ -34,6 +34,15 @@ const {
     dailyClaimHandler,
 } = require('./src/commands/daily');
 
+const {
+    infoJSON,
+    infoHandler,
+} = require('./src/commands/info');
+
+const {
+    addUsernameIfUserDoesntHaveOne,
+} = require('./src/add_usernames');
+
 config();
 
 const database = require('./src/db/database');
@@ -67,6 +76,8 @@ client.on('interactionCreate', async (interaction) => {
         return adventRegisterHandler(interaction);
     }
 
+    addUsernameIfUserDoesntHaveOne(interaction);
+
     if (interaction.commandName === 'unregister') {
         return adventUnregisterHandler(interaction);
     }
@@ -86,6 +97,11 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.commandName === 'daily') {
         return dailyClaimHandler(interaction);
     }
+
+    if (interaction.commandName === 'info') {
+        return infoHandler(interaction);
+    }
+
 });
 
 async function main() {
@@ -97,6 +113,7 @@ async function main() {
         leaderboardJSON,
         upgradeJSON,
         dailyClaimJSON,
+        infoJSON,
     ];
     
     try{
@@ -116,6 +133,7 @@ main();
 //Schedule a cron job for every minute
 const increment = require('./src/increment');
 nodecron.schedule('* * * * *', async () => {
-    console.log('Updating knowledge')
+    var date = new Date();
+    console.log('Running an upgrade of knowledge at ' + date);
     await increment.updateKnowledge();
 });

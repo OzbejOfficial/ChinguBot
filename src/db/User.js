@@ -7,6 +7,9 @@ const UserSchema = new Schema({
         required: true,
         unique: true,
     },
+    discordUsername: {
+        type: String,
+    },
     knowledge: {
         type: Number,
         default: 0,

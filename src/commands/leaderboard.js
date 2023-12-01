@@ -11,7 +11,9 @@ const leaderboardHandler = async (interaction) => {
     const users = await User.find({ active: true }).sort({ knowledge: -1 });
 
     const leaderboard = users.map((user, index) => {
-        return `${index + 1}. <@${user.discordId}> - ${user.knowledge}`;
+        //Show users but dont ping them
+        return `${index + 1}. ${user.discordUsername} - ${Math.floor(user.knowledge)}`;
+        //return `${index + 1}. <@${user.discordId}> - ${user.knowledge}`;
     });
 
     return interaction.reply({

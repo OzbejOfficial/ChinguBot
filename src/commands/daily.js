@@ -20,8 +20,8 @@ const dailyClaimHandler = async (interaction) => {
     }
 
     // Get time for UTC+1
-    const now = new Date();
-    now.setHours(now.getHours() + 1);
+    let now = new Date();
+    now.setHours(now.getHours() + 9);
     const lastClaim = user.last_contribution;
 
     if (lastClaim.getDate() === now.getDate() && lastClaim.getMonth() === now.getMonth() && lastClaim.getFullYear() === now.getFullYear()) {
@@ -32,25 +32,21 @@ const dailyClaimHandler = async (interaction) => {
     }
 
     // Give the user their reward
-    switch(now) {
-        case now.getDay() === 1 && now.getMonth() === 12:
-            user.knowledge += 50;
-            break;
-        case now.getDay() === 2 && now.getMonth() === 12:
-            user.knowledge += 200;
-            break;
-        case now.getDay() === 3 && now.getMonth() === 12:
-            user.knowledge += 500;
-            break;
-        case now.getDay() === 4 && now.getMonth() === 12:
-            user.knowledge += 1000;
-            break;
-        case now.getDay() === 5 && now.getMonth() === 12:
-            user.knowledge += 2000;
-            break;
+    if(now.getDate() === 1 && now.getMonth() === 11) {
+        user.knowledge += 50;
+    } else if(now.getDate() === 2 && now.getMonth() === 11) {
+        user.knowledge += 300;
+    } else if(now.getDate() === 3 && now.getMonth() === 11) {
+        user.knowledge += 1000;
+    } else if(now.getDate() === 4 && now.getMonth() === 11) {
+        user.knowledge += 3000;
+    } else if(now.getDate() === 5 && now.getMonth() === 11) {
+        user.knowledge += 10000;
     }
 
     user.days_contributed += 1;
+    now = new Date();
+    now.setHours(now.getHours() + 1)
     user.last_contribution = now;
     await user.save();
 

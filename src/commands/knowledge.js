@@ -21,7 +21,7 @@ const adventKnowledgeHandler = async (interaction) => {
     }
 
     return interaction.reply({
-        content: `Your knowledge is ${user.knowledge}`,
+        content: `Your knowledge is ${Math.round(user.knowledge * 100) / 100} and your coding speed is ${Math.round(user.coding_speed * 100) / 100}!`,
     });
 };
 
