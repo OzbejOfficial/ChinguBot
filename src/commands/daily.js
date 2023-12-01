@@ -32,22 +32,16 @@ const dailyClaimHandler = async (interaction) => {
     }
 
     // Give the user their reward
-    switch(now) {
-        case now.getDay() === 1 && now.getMonth() === 12:
-            user.knowledge += 50;
-            break;
-        case now.getDay() === 2 && now.getMonth() === 12:
-            user.knowledge += 200;
-            break;
-        case now.getDay() === 3 && now.getMonth() === 12:
-            user.knowledge += 500;
-            break;
-        case now.getDay() === 4 && now.getMonth() === 12:
-            user.knowledge += 1000;
-            break;
-        case now.getDay() === 5 && now.getMonth() === 12:
-            user.knowledge += 2000;
-            break;
+    if(now.getDate() === 1 && now.getMonth() === 11) {
+        user.knowledge += 50;
+    } else if(now.getDate() === 2 && now.getMonth() === 11) {
+        user.knowledge += 200;
+    } else if(now.getDate() === 3 && now.getMonth() === 11) {
+        user.knowledge += 500;
+    } else if(now.getDate() === 4 && now.getMonth() === 11) {
+        user.knowledge += 1000;
+    } else if(now.getDate() === 5 && now.getMonth() === 11) {
+        user.knowledge += 2000;
     }
 
     user.days_contributed += 1;

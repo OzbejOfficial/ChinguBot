@@ -116,6 +116,7 @@ main();
 //Schedule a cron job for every minute
 const increment = require('./src/increment');
 nodecron.schedule('* * * * *', async () => {
-    console.log('Updating knowledge')
+    var date = new Date();
+    console.log('Running an upgrade of knowledge at ' + date);
     await increment.updateKnowledge();
 });
