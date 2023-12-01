@@ -35,6 +35,7 @@ const dailyClaimHandler = async (interaction) => {
     if(now.getDate() === 1 && now.getMonth() === 11) {
         user.knowledge += 50;
     } else if(now.getDate() === 2 && now.getMonth() === 11) {
+<<<<<<< HEAD
         user.knowledge += 300;
     } else if(now.getDate() === 3 && now.getMonth() === 11) {
         user.knowledge += 1000;
@@ -42,6 +43,15 @@ const dailyClaimHandler = async (interaction) => {
         user.knowledge += 3000;
     } else if(now.getDate() === 5 && now.getMonth() === 11) {
         user.knowledge += 10000;
+=======
+        user.knowledge += 200;
+    } else if(now.getDate() === 3 && now.getMonth() === 11) {
+        user.knowledge += 500;
+    } else if(now.getDate() === 4 && now.getMonth() === 11) {
+        user.knowledge += 1000;
+    } else if(now.getDate() === 5 && now.getMonth() === 11) {
+        user.knowledge += 2000;
+>>>>>>> 30dbded735cad8aa63f7ca0634e1d331c3185783
     }
 
     user.days_contributed += 1;
