@@ -1,6 +1,7 @@
-const { SlashCommandBuilder } = require('@discordjs/builders');
 const User = require('../db/User');
 const KnowledgeUpgrade = require('../db/KnowledgeUpgrade');
+
+const { EmbedBuilder } = require('discord.js');
 
 const upgrades = [
     {
@@ -75,90 +76,125 @@ const upgrades = [
     },
 ];
 
-const upgrade = new SlashCommandBuilder()
-    .setName('upgrade')
-    .setDescription('Upgrade your knowledge')
-    .addStringOption(option =>
-        option.setName('resource')
-        .setDescription('Give me a resource to upgrade')
-        .setRequired(false));
+const calculateCost = (base_cost, level, cost_increase) => {
+    let cost = base_cost;
+    for (let i = 0; i < level; i++) {
+        cost *= cost_increase;
+    }
+    return cost;
+}
 
-const upgradeJSON = upgrade.toJSON();
-
-const calculateCost = (baseCost, level, costIncrease) => {
-    return baseCost * Math.pow(costIncrease, level - 1);
-};
+const upgradeJSON = {
+    name: 'upgrade',
+    description: 'Upgrade your resources',
+    options: [
+        {
+            name: 'resource',
+            type: 3,
+            description: 'The resource you want to upgrade',
+            required: false,
+            choices: upgrades.map(upgrade => {
+                return {
+                    name: upgrade.resource,
+                    value: upgrade.resource,
+                };
+            }),
+        },
+        {
+            name: 'amount',
+            type: 3,
+            description: 'The amount of times you want to upgrade the resource',
+            required: false,
+        },
+    ],
+}
 
 const upgradeHandler = async (interaction) => {
-    const resource = interaction.options.getString('resource');
-    const discordId = interaction.user.id;
+    const { options } = interaction;
+
+    const user = await User.findOne({ discordId: interaction.user.id });
+
+    if (!user) {
+        return interaction.reply({
+            content: 'You have not registered for the advent calendar',
+            ephemeral: true,
+        });
+    }
+
+    const resource = options.getString('resource');
 
     if (!resource) {
-        const user = await User.findOne({ discordId });
-        if (!user) {
-            await interaction.reply('User not found in the database.');
-            return;
-        }
+        const embed = new EmbedBuilder()
+            .setTitle('Upgrades')
+            .setDescription('Your current Knowledge: ' + (Math.round(user.knowledge * 100) / 100) + '\n\n');
 
-        // Fetch or create KnowledgeUpgrade documents for each upgrade
-        const knowledgeUpgrades = {};
         for (const upgrade of upgrades) {
-            let knowledgeUpgrade = await KnowledgeUpgrade.findOne({ discordId, resource: upgrade.resource.toLowerCase() });
-            if (!knowledgeUpgrade) {
-                knowledgeUpgrade = await KnowledgeUpgrade.create({ discordId, resource: upgrade.resource.toLowerCase() });
-            }
-            knowledgeUpgrades[upgrade.resource.toLowerCase()] = knowledgeUpgrade;
-        }
-
-        const upgradeList = upgrades.map((upgrade) => {
-            const knowledgeUpgrade = knowledgeUpgrades[upgrade.resource.toLowerCase()];
+            const knowledgeUpgrade = await KnowledgeUpgrade.findOne({ discordId: interaction.user.id, resource: upgrade.resource.toLowerCase() });
             const userLevel = knowledgeUpgrade.level || 1;
             const cost = calculateCost(upgrade.cost, userLevel, upgrade.cost_increase);
+    
+            embed.addFields({
+                name: `${upgrade.resource} - Cost: ${cost.toFixed(2)} - Level: ${userLevel}`,
+                value: upgrade.description,
+            });
+        }
 
-            return `**${upgrade.resource} - Cost: ${cost.toFixed(2)} - Level: ${userLevel}**\n${upgrade.description}`;
+        return interaction.reply({
+            embeds: [embed],
         });
+    }
 
-        await interaction.reply(`### Available upgrades (Your Knowledge -> ${user.knowledge}):\n${upgradeList.join('\n')}`);
+    let amount;
+    if (options.getString('amount')) {
+        let option_value = options.getString('amount');
+        if (option_value === 'max') {
+            option_value = 1000000;
+        }
+
+        amount = parseInt(option_value);
+        if (isNaN(amount)) {
+            return interaction.reply({
+                content: 'Invalid amount',
+                ephemeral: true,
+            });
+        }
     } else {
-        const selectedUpgrade = upgrades.find((upgrade) => upgrade.resource.toLowerCase() === resource.toLowerCase());
+        amount = 1;
+    }
 
-        if (!selectedUpgrade) {
-            await interaction.reply(`The specified resource '${resource}' is not valid.`);
-            return;
-        }
+    const upgrade = upgrades.find(upgrade => upgrade.resource === resource);
 
-        const user = await User.findOne({ discordId });
-        if (!user) {
-            await interaction.reply('User not found in the database.');
-            return;
-        }
+    if (!upgrade) {
+        return interaction.reply({
+            content: 'Invalid resource',
+            ephemeral: true,
+        });
+    }
 
-        // Fetch or create KnowledgeUpgrade document for the specified upgrade
-        let knowledgeUpgrade = await KnowledgeUpgrade.findOne({ discordId, resource: resource.toLowerCase() });
-        if (!knowledgeUpgrade) {
-            knowledgeUpgrade = await KnowledgeUpgrade.create({ discordId, resource: resource.toLowerCase() });
-        }
-
-        const userLevel = knowledgeUpgrade.level || 1;
-        const cost = calculateCost(selectedUpgrade.cost, userLevel, selectedUpgrade.cost_increase);
-
+    const knowledgeUpgrade = await KnowledgeUpgrade.findOne({ discordId: interaction.user.id, resource: resource.toLowerCase() });
+    for(let i = 0; i < amount; i++) {
+        const cost = calculateCost(upgrade.cost, knowledgeUpgrade.level, upgrade.cost_increase);
         if (user.knowledge < cost) {
-            await interaction.reply(`You don't have enough knowledge to upgrade '${resource}'. Required knowledge: ${cost.toFixed(2)}`);
-            return;
+            return interaction.reply({
+                content: `You don't have enough knowledge to upgrade '${resource}'. Required knowledge: ${cost.toFixed(2)}`,
+                ephemeral: true,
+            });
         }
 
         user.knowledge -= cost;
-        user.coding_speed += selectedUpgrade.increase;
-        user.save();
+        user.coding_speed += upgrade.increase;
 
-        // Update user's knowledge upgrade level
-        knowledgeUpgrade.level = (knowledgeUpgrade.level || 1) + 1;
-        knowledgeUpgrade.add_speed = knowledgeUpgrade.add_speed + selectedUpgrade.increase;
-        knowledgeUpgrade.save();
-
-        await interaction.reply(`Successfully upgraded '${resource}'! Your new knowledge level: ${knowledgeUpgrade.level}`);
+        knowledgeUpgrade.level += 1;
+        knowledgeUpgrade.add_speed += upgrade.increase;
     }
-}
+
+    await user.save();
+    await knowledgeUpgrade.save();
+
+    return interaction.reply({
+        content: `You have successfully upgraded your ${resource} by ${amount} levels`,
+    });
+};
 
 module.exports = {
     upgradeJSON,
