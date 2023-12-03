@@ -21,7 +21,7 @@ const dailyClaimHandler = async (interaction) => {
 
     // Get time for UTC+1
     let now = new Date();
-    now.setHours(now.getHours() + 9);
+    now.setHours(now.getHours() + 1);
     const lastClaim = user.last_contribution;
 
     if (lastClaim.getDate() === now.getDate() && lastClaim.getMonth() === now.getMonth() && lastClaim.getFullYear() === now.getFullYear()) {

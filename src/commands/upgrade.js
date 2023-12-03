@@ -152,7 +152,7 @@ const upgradeHandler = async (interaction) => {
         }
 
         amount = parseInt(option_value);
-        if (isNaN(amount)) {
+        if (isNaN(amount) || amount < 1) {
             return interaction.reply({
                 content: 'Invalid amount',
                 ephemeral: true,
