@@ -5,43 +5,34 @@ const { SlashCommandBuilder } = require('@discordjs/builders');
 const nodecron = require('node-cron');
 
 const { 
-    adventRegisterJSON, 
-    adventRegisterHandler,
-} = require('./src/commands/register');
+    koreanCommandJSON, 
+    koreanHandler,
+} = require('./src/commands/korean');
 
 const {
-    adventUnregisterJSON,
-    adventUnregisterHandler,
-} = require('./src/commands/unregister');
+    pointsCommandJSON,
+    pointsHandler,
+} = require('./src/commands/points');
 
 const {
-    adventKnowledgeJSON,
-    adventKnowledgeHandler,
-} = require('./src/commands/knowledge');
+    addWordJSON,
+    removeWordJSON,
+    editWordJSON,
+    addWordHandler,
+    removeWordHandler,
+    editWordHandler,
+} = require('./src/commands/words');
+
+//
 
 const {
-    leaderboardJSON,
-    leaderboardHandler,
-} = require('./src/commands/leaderboard');
+    quizJSON,
+    newQuizWord,
+    openGuessPrompt,
+    isCorrectGuess,
+} = require('./src/quizWords');
 
-const {
-    upgradeJSON,
-    upgradeHandler,
-} = require('./src/commands/upgrade');
-
-const {
-    dailyClaimJSON,
-    dailyClaimHandler,
-} = require('./src/commands/daily');
-
-const {
-    infoJSON,
-    infoHandler,
-} = require('./src/commands/info');
-
-const {
-    addUsernameIfUserDoesntHaveOne,
-} = require('./src/add_usernames');
+//
 
 config();
 
@@ -70,36 +61,42 @@ client.on('messageUpdate', async (oldMessage, newMessage) => {
 });
 
 client.on('interactionCreate', async (interaction) => {
+    if (interaction.isButton()) {
+        if (interaction.customId === 'guess') {
+            return await openGuessPrompt(interaction);
+        }
+    }
+
+    if(interaction.isModalSubmit()) {
+        if (interaction.customId === 'guessPrompt') {
+            return await isCorrectGuess(interaction);
+        }
+    }
+
     if (!interaction.isCommand()) return;
 
-    if (interaction.commandName === 'register') {
-        return adventRegisterHandler(interaction);
+    if (interaction.commandName === 'korean') {
+        return koreanHandler(interaction);
     }
 
-    addUsernameIfUserDoesntHaveOne(interaction);
-
-    if (interaction.commandName === 'unregister') {
-        return adventUnregisterHandler(interaction);
+    if (interaction.commandName === 'quiz') {
+        return await newQuizWord(interaction);
     }
 
-    if (interaction.commandName === 'knowledge') {
-        return adventKnowledgeHandler(interaction);
+    if (interaction.commandName === 'points') {
+        return pointsHandler(interaction);
     }
 
-    if (interaction.commandName === 'leaderboard') {
-        return leaderboardHandler(interaction);
+    if (interaction.commandName === 'word-add') {
+        return addWordHandler(interaction);
     }
 
-    if (interaction.commandName === 'upgrade') {
-        return upgradeHandler(interaction);
+    if (interaction.commandName === 'word-remove') {
+        return removeWordHandler(interaction);
     }
 
-    if (interaction.commandName === 'daily') {
-        return dailyClaimHandler(interaction);
-    }
-
-    if (interaction.commandName === 'info') {
-        return infoHandler(interaction);
+    if (interaction.commandName === 'word-edit') {
+        return editWordHandler(interaction);
     }
 
 });
@@ -107,20 +104,21 @@ client.on('interactionCreate', async (interaction) => {
 async function main() {
     
     const commands = [
-        adventRegisterJSON,
-        adventUnregisterJSON,
-        adventKnowledgeJSON,
-        leaderboardJSON,
-        upgradeJSON,
-        dailyClaimJSON,
-        infoJSON,
+        koreanCommandJSON,
+        pointsCommandJSON,
+        
+        addWordJSON,
+        removeWordJSON,
+        editWordJSON,
+
+        quizJSON,
     ];
     
     try{
         await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, process.env.GUILD_ID), {
             body: commands,  
         })
-        await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, process.env.SYSTEMATTIC_ID), {
+        await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, process.env.SERVER_ID), {
             body: commands,  
         })
     } catch (err) {
@@ -131,9 +129,11 @@ async function main() {
 main();
 
 //Schedule a cron job for every minute
+/*
 const increment = require('./src/increment');
 nodecron.schedule('* * * * *', async () => {
     var date = new Date();
     console.log('Running an upgrade of knowledge at ' + date);
     await increment.updateKnowledge();
 });
+*/

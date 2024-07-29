@@ -10,25 +10,9 @@ const UserSchema = new Schema({
     discordUsername: {
         type: String,
     },
-    knowledge: {
+    koreanPoints: {
         type: Number,
         default: 0,
-    },
-    days_contributed: {
-        type: Number,
-        default: 0,
-    },
-    last_contribution: {
-        type: Date,
-        default: Date.UTC(2023, 10, 20, 0, 0, 0, 0),
-    },
-    coding_speed: {
-        type: Number,
-        default: 0,
-    },
-    active: {
-        type: Boolean,
-        default: true,
     },
 });
 
