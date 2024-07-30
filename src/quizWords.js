@@ -2,6 +2,9 @@ const mongoose = require('mongoose');
 
 const User = require('./db/User');
 const Word = require('./db/Word');
+const Config = require('./db/Config');
+
+const nodecron = require('node-cron');
 
 const { ActionRowBuilder, ButtonBuilder, ButtonStyle, Events, SlashCommandBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
@@ -17,7 +20,7 @@ var randomTranslation = "";
 var last_interaction = null;
 
 // Write an embed message with random word and let the user guess the translation
-const newQuizWord = async (interaction) => {
+const newQuizWordInteraction = async (interaction) => {
     const randomWords = await Word.aggregate([{ $sample: { size: 1 } }]);
     const word = randomWords[0];
 
@@ -32,11 +35,7 @@ const newQuizWord = async (interaction) => {
     const actionRow = new ActionRowBuilder()
         .addComponents(guess);
 
-    if(last_interaction != null) {
-        last_interaction.editReply({
-            components: [],
-        });
-    }
+    await buttonDisable();
 
     last_interaction = interaction;
 
@@ -45,6 +44,52 @@ const newQuizWord = async (interaction) => {
         content: `What is the Korean translation of ${randomWord}?`,
         components: [actionRow],
     });
+};
+
+// Write an embed message with random word and let the user guess the translation
+const newQuizWord = async (rest, client) => {
+    try {
+        const randomWords = await Word.aggregate([{ $sample: { size: 1 } }]);
+        const word = randomWords[0];
+
+        randomWord = word.korean_word;
+        randomTranslation = word.english_word;
+
+        const guess = new ButtonBuilder()
+            .setCustomId('guess')
+            .setLabel('Guess')
+            .setStyle(ButtonStyle.Primary);
+
+        const actionRow = new ActionRowBuilder()
+            .addComponents(guess);
+
+        await buttonDisable();
+
+        const config = await Config.findOne({});
+
+        if (!config || !config.quiz_active) {
+            return;
+        }
+
+        const channel = await client.channels.fetch(config.quiz_channel);
+        if (!channel) {
+            console.error(`Channel with ID ${config.quiz_channel} not found`);
+            return;
+        }
+
+        const message = await channel.send({
+            //embeds: [quizEmbed], // Uncomment and define quizEmbed if needed
+            content: `What is the Korean translation of ${randomWord}?`,
+            components: [actionRow],
+        });
+
+        last_interaction = message;
+
+        quizCooldownJob(rest, client);
+
+    } catch (error) {
+        console.error('Error in newQuizWord:', error);
+    }
 };
 
 const openGuessPrompt = async (interaction) => {
@@ -100,11 +145,7 @@ const isCorrectGuess = async (interaction) => {
             await user.save();
         }
 
-        if(last_interaction != null) {
-            last_interaction.editReply({
-                components: [],
-            });
-        }
+        await buttonDisable();
         
         return interaction.reply({
             content: `${interaction.user} knows that ${randomWord} means ${randomTranslation} and now has ${user.koreanPoints} points!`,
@@ -113,9 +154,223 @@ const isCorrectGuess = async (interaction) => {
 
 };
 
+const buttonDisable = async () => {
+    if(last_interaction != null) {
+        try {
+            last_interaction.edit({
+                components: [],
+            });
+
+            return;
+        } catch (error) {
+            console.error('Was not able to edit the previous message');
+        }
+
+        try {
+            last_interaction.editReply({
+                components: [],
+            });
+        } catch (error) {
+            console.error('Was not able to edit the previous reply');
+        }
+    }
+}
+
+// QUIZ ACTIVE / DISABLE
+
+const qEnable = new SlashCommandBuilder()
+    .setName('quiz-enable')
+    .setDescription('Enable the quiz!');
+
+const qEnableJSON = qEnable.toJSON();
+
+const qDisable = new SlashCommandBuilder()
+    .setName('quiz-disable')
+    .setDescription('Disable the quiz!');
+
+const qDisableJSON = qDisable.toJSON();
+
+const quizActivateHandler = async (interaction) => {
+    // Check if the user has the required permissions
+    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        return interaction.reply({
+            content: 'You do not have the required permissions to use this command.',
+            ephemeral: true,
+        });
+    }
+
+    const config = await Config.findOne({});
+
+    if (!config) {
+        const newConfig = new Config({
+            quiz_active: true,
+        });
+
+        await newConfig.save();
+    } else {
+        config.quiz_active = true;
+        await config.save();
+    }
+
+    return interaction.reply({
+        content: 'Quiz enabled!',
+        ephemeral: true,
+    });
+}
+
+const quizDeactivateHandler = async (interaction) => {
+    // Check if the user has the required permissions
+    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        return interaction.reply({
+            content: 'You do not have the required permissions to use this command.',
+            ephemeral: true,
+        });
+    }
+
+    const config = await Config.findOne({});
+
+    if (!config) {
+        const newConfig = new Config({
+            quiz_active: false,
+        });
+
+        await newConfig.save();
+    } else {
+        config.quiz_active = false;
+        await config.save();
+    }
+    
+    return interaction.reply({
+        content: 'Quiz disabled!',
+        ephemeral: true,
+    });
+}
+
+// QUIZ CHANNEL SET
+
+const quizChannel = new SlashCommandBuilder()
+    .setName('quiz-channel')
+    .setDescription('Set the quiz channel.')
+    .addChannelOption(option =>
+        option.setName('channel')
+            .setDescription('The channel for the quiz')
+            .setRequired(true));
+
+const quizChannelJSON = quizChannel.toJSON();
+
+const quizChannelHandler = async (interaction) => {
+    // Check if the user has the required permissions
+    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        return interaction.reply({
+            content: 'You do not have the required permissions to use this command.',
+            ephemeral: true,
+        });
+    }
+
+    const channel = interaction.options.getChannel('channel');
+
+    const config = await Config.findOne({});
+
+    if (!config) {
+        const newConfig = new Config({
+            quiz_channel: channel.id,
+        });
+
+        await newConfig.save();
+    } else {
+        config.quiz_channel = channel.id;
+        await config.save();
+    }
+    
+    return interaction.reply({
+        content: `Quiz channel set to ${channel.name}`,
+        ephemeral: true,
+    });
+}
+
+// QUIZ COOLDOWN SET
+
+const quizCooldown = new SlashCommandBuilder()
+    .setName('quiz-cooldown')
+    .setDescription('Set the quiz cooldown.')
+    .addIntegerOption(option =>
+        option.setName('min')
+            .setDescription('The minimum cooldown time in seconds')
+            .setRequired(true))
+    .addIntegerOption(option =>
+        option.setName('max')
+            .setDescription('The maximum cooldown time in seconds')
+            .setRequired(true));
+
+const quizCooldownJSON = quizCooldown.toJSON();
+
+const quizCooldownHandler = async (interaction) => {
+    // Check if the user has the required permissions
+    if (!interaction.member.permissions.has('ADMINISTRATOR')) {
+        return interaction.reply({
+            content: 'You do not have the required permissions to use this command.',
+            ephemeral: true,
+        });
+    }
+
+    const min = interaction.options.getInteger('min');
+    const max = interaction.options.getInteger('max');
+
+    const config = await Config.findOne({});
+
+    if (!config) {
+        const newConfig = new Config({
+            quiz_cooldown_min: min,
+            quiz_cooldown_max: max,
+        });
+
+        await newConfig.save();
+    } else {
+        config.quiz_cooldown_min = min;
+        config.quiz_cooldown_max = max;
+        await config.save();
+    }
+    
+    return interaction.reply({
+        content: `Quiz cooldown set to ${min} - ${max} seconds`,
+        ephemeral: true,
+    });
+}
+
+// SCHEDULE NEXT QUIZ WITH A COOLDOWN
+
+const quizCooldownJob = async (rest, client) => {
+    const config = await Config.findOne({});
+    if (!config || !config.quiz_active) return;
+
+    const min = config.quiz_cooldown_min;
+    const max = config.quiz_cooldown_max;
+
+    const cooldown = Math.floor(Math.random() * (max - min + 1) + min);
+
+    console.log(`Next quiz in ${cooldown} seconds`);
+
+    setTimeout(async () => {
+        await newQuizWord(rest, client);
+    }, cooldown * 1000);
+
+    return;
+}
+
+
 module.exports = {
     quizJSON,
+    qEnableJSON,
+    qDisableJSON,
+    quizChannelJSON,
+    quizCooldownJSON,
+    quizActivateHandler,
+    quizDeactivateHandler,
+    quizChannelHandler,
+    quizCooldownHandler,
+    quizCooldownJob,
     newQuizWord,
+    newQuizWordInteraction,
     openGuessPrompt,
     isCorrectGuess,
 }

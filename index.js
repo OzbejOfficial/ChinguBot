@@ -4,6 +4,8 @@ const { REST } = require('@discordjs/rest');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const nodecron = require('node-cron');
 
+const Config = require('./src/db/Config');
+
 const { 
     koreanCommandJSON, 
     koreanHandler,
@@ -13,6 +15,13 @@ const {
     pointsCommandJSON,
     pointsHandler,
 } = require('./src/commands/points');
+
+const {
+    leaderboardCommandJSON,
+    leaderboardHandler,
+    leaderboardPreviousPage,
+    leaderboardNextPage,
+} = require('./src/commands/leaderboard');
 
 const {
     addWordJSON,
@@ -26,8 +35,21 @@ const {
 //
 
 const {
+    qEnableJSON,
+    qDisableJSON,
+    quizActivateHandler,
+    quizDeactivateHandler,
+
+    quizChannelJSON,
+    quizChannelHandler,
+
+    quizCooldownJSON,
+    quizCooldownHandler,
+    quizCooldownJob,
+
     quizJSON,
     newQuizWord,
+    newQuizWordInteraction,
     openGuessPrompt,
     isCorrectGuess,
 } = require('./src/quizWords');
@@ -65,6 +87,14 @@ client.on('interactionCreate', async (interaction) => {
         if (interaction.customId === 'guess') {
             return await openGuessPrompt(interaction);
         }
+
+        if (interaction.customId === 'leaderboard_previous') {
+            return leaderboardPreviousPage(interaction);
+        }
+
+        if (interaction.customId === 'leaderboard_next') {
+            return leaderboardNextPage(interaction);
+        }
     }
 
     if(interaction.isModalSubmit()) {
@@ -79,12 +109,12 @@ client.on('interactionCreate', async (interaction) => {
         return koreanHandler(interaction);
     }
 
-    if (interaction.commandName === 'quiz') {
-        return await newQuizWord(interaction);
-    }
-
     if (interaction.commandName === 'points') {
         return pointsHandler(interaction);
+    }
+
+    if (interaction.commandName === 'leaderboard') {
+        return leaderboardHandler(interaction);
     }
 
     if (interaction.commandName === 'word-add') {
@@ -99,19 +129,48 @@ client.on('interactionCreate', async (interaction) => {
         return editWordHandler(interaction);
     }
 
+    // This one for testing
+    /*
+    if (interaction.commandName === 'quiz') {
+        return await newQuizWordInteraction(interaction);
+    }
+    */
+
+    if (interaction.commandName === 'quiz-enable') {
+        return quizActivateHandler(interaction);
+    }
+
+    if (interaction.commandName === 'quiz-disable') {
+        return quizDeactivateHandler(interaction);
+    }
+
+    if (interaction.commandName === 'quiz-channel') {
+        return quizChannelHandler(interaction);
+    }
+
+    if (interaction.commandName === 'quiz-cooldown') {
+        return quizCooldownHandler(interaction);
+    }
+
 });
 
 async function main() {
     
+    //        quizJSON,
+
     const commands = [
         koreanCommandJSON,
         pointsCommandJSON,
+        leaderboardCommandJSON,
         
         addWordJSON,
         removeWordJSON,
         editWordJSON,
 
-        quizJSON,
+        qEnableJSON,
+        qDisableJSON,
+        quizChannelJSON,
+        quizCooldownJSON,
     ];
     
     try{
@@ -128,12 +187,15 @@ async function main() {
 
 main();
 
+quizCooldownJob(rest, client);
+
 //Schedule a cron job for every minute
 /*
-const increment = require('./src/increment');
 nodecron.schedule('* * * * *', async () => {
+    const con = await Config.findOne({});
+    if (!con || !con.quiz_active) return;
     var date = new Date();
-    console.log('Running an upgrade of knowledge at ' + date);
-    await increment.updateKnowledge();
+    console.log('Running new quiz at ' + date);
+    await newQuizWord(rest, client);
 });
 */
