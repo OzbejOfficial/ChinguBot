@@ -14,13 +14,18 @@ const addWord = new SlashCommandBuilder()
     .addStringOption(option =>
         option.setName('korean_word')
             .setDescription('The Korean word')
-            .setRequired(true));
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('eng_allows')
+            .setDescription('English words that the Korean word allows (separated by commas)')
+            .setRequired(false));
 
 const addWordJSON = addWord.toJSON();
 
 const addWordHandler = async (interaction) => {
     const englishWord = interaction.options.getString('english_word');
     const koreanWord = interaction.options.getString('korean_word');
+    const engAllows = interaction.options.getString('eng_allows');
 
     const exists = await Word.findOne({ english_word: englishWord });
     if (exists) {
@@ -32,12 +37,15 @@ const addWordHandler = async (interaction) => {
     const newWord = new Word({
         english_word: englishWord,
         korean_word: koreanWord,
+        eng_allows: engAllows ? engAllows.split(',') : [],
     });
 
     await newWord.save();
 
+    const extra = engAllows ? ` with English words ${engAllows}` : '';
+
     return interaction.reply({
-        content: `Added ${englishWord} - ${koreanWord} to the database!`,
+        content: `Added ${englishWord} - ${koreanWord} to the database!` + extra,
     });
 }
 
@@ -83,13 +91,18 @@ const editWord = new SlashCommandBuilder()
     .addStringOption(option =>
         option.setName('korean_word')
             .setDescription('The Korean word')
-            .setRequired(true));
+            .setRequired(true))
+    .addStringOption(option =>
+        option.setName('eng_allows')
+            .setDescription('English words that the Korean word allows (separated by commas)')
+            .setRequired(false));
 
 const editWordJSON = editWord.toJSON();
 
 const editWordHandler = async (interaction) => {
     const englishWord = interaction.options.getString('english_word');
     const koreanWord = interaction.options.getString('korean_word');
+    const engAllows = interaction.options.getString('eng_allows');
 
     const word = await Word.findOne({ english_word: englishWord });
 
@@ -99,7 +112,7 @@ const editWordHandler = async (interaction) => {
         });
     }
 
-    await Word.updateOne({ english_word: englishWord }, { korean_word: koreanWord });
+    await Word.updateOne({ english_word: englishWord }, { korean_word: koreanWord }, { eng_allows: engAllows ? engAllows.split(',') : [] });
 
     return interaction.reply({
         content: `Updated ${englishWord} to ${koreanWord} in the database!`,

@@ -123,34 +123,39 @@ const isCorrectGuess = async (interaction) => {
     if (interaction.user.bot) return;
     
     const guess = interaction.fields.fields.get('guessInput').value;
-    if (guess.toLowerCase() !== randomTranslation.toLowerCase()) {
-        // reply privately to the user
-        return interaction.reply({
-            content: `Your guess of ${guess} is incorrect. Try again!`,
-            ephemeral: true,
-        });
-    } else {
-        const user = await User.findOne({ discordId: interaction.user.id });
+    const guestLower = guess.toLowerCase();
+    const translation = await Word.find({ korean_word: randomWord });
 
-        if (!user) {
-            const newUser = new User({
-                discordId: interaction.user.id,
-                discordUsername: interaction.user.username,
-                koreanPoints: 1,
+    for (let i = 0; i < translation.length; i++) {
+        // check if it is english_word or in the array eng_allows
+        if (guestLower === translation[i].english_word.toLowerCase() || translation[i].eng_allows.includes(guestLower)) {
+            const user = await User.findOne({ discordId: interaction.user.id });
+
+            if (!user) {
+                const newUser = new User({
+                    discordId: interaction.user.id,
+                    discordUsername: interaction.user.username,
+                    koreanPoints: 1,
+                });
+
+                await newUser.save();
+            } else {
+                user.koreanPoints += 1;
+                await user.save();
+            }
+
+            await buttonDisable();
+            
+            return interaction.reply({
+                content: `${interaction.user} knows that ${randomWord} means ${randomTranslation} and now has ${user.koreanPoints} points!`,
             });
-
-            await newUser.save();
-        } else {
-            user.koreanPoints += 1;
-            await user.save();
         }
-
-        await buttonDisable();
-        
-        return interaction.reply({
-            content: `${interaction.user} knows that ${randomWord} means ${randomTranslation} and now has ${user.koreanPoints} points!`,
-        });
     }
+
+    return interaction.reply({
+        content: `Your guess of ${guess} is incorrect. Try again!`,
+        ephemeral: true,
+    });
 
 };
 

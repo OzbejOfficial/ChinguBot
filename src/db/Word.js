@@ -11,6 +11,10 @@ const WordSchema = new Schema({
         type: String,
         required: true,
     },
+    eng_allows: {
+        type: [String],
+        default: [],
+    },
 });
 
 module.exports = mongoose.model('Word', WordSchema);
