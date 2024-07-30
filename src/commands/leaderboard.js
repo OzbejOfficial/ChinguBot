@@ -38,6 +38,12 @@ const leaderboardHandler = async (interaction) => {
 
     const row = new ActionRowBuilder()
 
+    if (users.length === 0) {
+        return interaction.reply({
+            content: 'No users found!',
+        });
+    }
+
     if (users.length === 10) {
         //row.addComponents(previousButton);
         row.addComponents(nextButton);

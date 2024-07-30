@@ -1,10 +1,6 @@
 const { Client, GatewayIntentBits, Routes } = require('discord.js');
 const { config } = require('dotenv');
 const { REST } = require('@discordjs/rest');
-const { SlashCommandBuilder } = require('@discordjs/builders');
-const nodecron = require('node-cron');
-
-const Config = require('./src/db/Config');
 
 const { 
     koreanCommandJSON, 
@@ -67,10 +63,17 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
 });
 
-client.login(process.env.BOT_TOKEN);
+try {
+    console.log('Bot is logging in');
+    client.login(process.env.BOT_TOKEN);
+} catch (err) {
+    console.error(err);
+}
 
 client.on('ready', () => {
     console.log('Bot is ready');
+
+    quizCooldownJob(rest, client);
 });
 
 client.on('messageCreate', async (message) => {
@@ -173,29 +176,16 @@ async function main() {
         quizCooldownJSON,
     ];
     
-    try{
-        await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, process.env.GUILD_ID), {
-            body: commands,  
-        })
-        await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, process.env.SERVER_ID), {
-            body: commands,  
-        })
-    } catch (err) {
-        console.error(err)
+    for(const serverId of process.env.SERVER_ID.split(',')) {
+        try{
+            await rest.put(Routes.applicationGuildCommands(process.env.APPLICATION_ID, serverId), {
+                body: commands,  
+            })
+        } catch (err) {
+            console.error(err)
+        }
     }
+    
 }
 
 main();
-
-quizCooldownJob(rest, client);
-
-//Schedule a cron job for every minute
-/*
-nodecron.schedule('* * * * *', async () => {
-    const con = await Config.findOne({});
-    if (!con || !con.quiz_active) return;
-    var date = new Date();
-    console.log('Running new quiz at ' + date);
-    await newQuizWord(rest, client);
-});
-*/
