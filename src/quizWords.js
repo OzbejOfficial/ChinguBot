@@ -129,7 +129,7 @@ const isCorrectGuess = async (interaction) => {
     for (let i = 0; i < translation.length; i++) {
         // check if it is english_word or in the array eng_allows
         if (guestLower === translation[i].english_word.toLowerCase() || translation[i].eng_allows.includes(guestLower)) {
-            const user = await User.findOne({ discordId: interaction.user.id });
+            var user = await User.findOne({ discordId: interaction.user.id });
 
             if (!user) {
                 const newUser = new User({
@@ -139,6 +139,8 @@ const isCorrectGuess = async (interaction) => {
                 });
 
                 await newUser.save();
+
+                user = newUser;
             } else {
                 user.koreanPoints += 1;
                 await user.save();
