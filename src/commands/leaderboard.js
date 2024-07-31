@@ -36,6 +36,7 @@ const leaderboardHandler = async (interaction) => {
         .setLabel('Next Page')
         .setStyle(ButtonStyle.Primary);
 
+    const isRow = false;
     const row = new ActionRowBuilder()
 
     if (users.length === 0) {
@@ -45,15 +46,13 @@ const leaderboardHandler = async (interaction) => {
     }
 
     if (users.length === 10) {
-        //row.addComponents(previousButton);
         row.addComponents(nextButton);
-    } else {
-        //row.addComponents(previousButton);
+        isRow = true;
     }
 
     return interaction.reply({
         embeds: [embed],
-        components: [row],
+        components: isRow ? [row] : [],
     });
 }
 
