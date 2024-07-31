@@ -76,6 +76,11 @@ client.on('ready', () => {
     quizCooldownJob(rest, client);
 });
 
+client.on('disconnect', () => {
+    console.log('Bot is disconnected');
+    client.login(process.env.BOT_TOKEN);
+});
+
 client.on('messageCreate', async (message) => {
     if (message.author.bot) return;
 

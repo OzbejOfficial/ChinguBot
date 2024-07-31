@@ -93,19 +93,22 @@ const changePage = async (interaction, page) => {
         .setLabel('Next Page')
         .setStyle(ButtonStyle.Primary);
 
+    const isRow = false;
     const row = new ActionRowBuilder();
     
     if (page !== 1) {
         row.addComponents(previousButton);
+        isRow = true;
     }
 
     if(users.length >= 10) {
         row.addComponents(nextButton);
+        isRow = true;
     }
 
     return interaction.update({
         embeds: [embed],
-        components: [row],
+        components: isRow ? [row] : [],
     });
 }
 
