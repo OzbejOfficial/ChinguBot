@@ -28,6 +28,11 @@ const {
     editWordHandler,
 } = require('./src/commands/words');
 
+const {
+    translateCommandJSON,
+    translateHandler,
+} = require('./src/commands/translate');
+
 //
 
 const {
@@ -45,7 +50,6 @@ const {
 
     quizJSON,
     newQuizWord,
-    newQuizWordInteraction,
     openGuessPrompt,
     isCorrectGuess,
 } = require('./src/quizWords');
@@ -125,6 +129,11 @@ client.on('interactionCreate', async (interaction) => {
         return leaderboardHandler(interaction);
     }
 
+    if (interaction.commandName === 'translate') {
+        return translateHandler(interaction);
+    }
+
+    /*
     if (interaction.commandName === 'word-add') {
         return addWordHandler(interaction);
     }
@@ -136,11 +145,12 @@ client.on('interactionCreate', async (interaction) => {
     if (interaction.commandName === 'word-edit') {
         return editWordHandler(interaction);
     }
+    */
 
     // This one for testing
     /*
     if (interaction.commandName === 'quiz') {
-        return await newQuizWordInteraction(interaction);
+        return await newQuizWord(rest, client);
     }
     */
 
@@ -163,17 +173,20 @@ client.on('interactionCreate', async (interaction) => {
 });
 
 async function main() {
-    
-    //        quizJSON,
+
+    /*
+        addWordJSON,
+        removeWordJSON,
+        editWordJSON,
+
+        quizJSON,
+    */
 
     const commands = [
         koreanCommandJSON,
         pointsCommandJSON,
         leaderboardCommandJSON,
-        
-        addWordJSON,
-        removeWordJSON,
-        editWordJSON,
+        translateCommandJSON,
 
         qEnableJSON,
         qDisableJSON,

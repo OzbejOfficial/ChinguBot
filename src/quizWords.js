@@ -20,40 +20,15 @@ var randomTranslation = "";
 var last_interaction = null;
 
 // Write an embed message with random word and let the user guess the translation
-const newQuizWordInteraction = async (interaction) => {
-    const randomWords = await Word.aggregate([{ $sample: { size: 1 } }]);
-    const word = randomWords[0];
-
-    randomWord = word.korean_word;
-    randomTranslation = word.english_word;
-
-    const guess = new ButtonBuilder()
-        .setCustomId('guess')
-        .setLabel('Guess')
-        .setStyle(ButtonStyle.Primary);
-
-    const actionRow = new ActionRowBuilder()
-        .addComponents(guess);
-
-    await buttonDisable();
-
-    last_interaction = interaction;
-
-    await interaction.reply({
-        //embeds: [quizEmbed],
-        content: `What is the Korean translation of ${randomWord}?`,
-        components: [actionRow],
-    });
-};
-
-// Write an embed message with random word and let the user guess the translation
 const newQuizWord = async (rest, client) => {
     try {
+        
+
         const randomWords = await Word.aggregate([{ $sample: { size: 1 } }]);
         const word = randomWords[0];
 
-        randomWord = word.korean_word;
-        randomTranslation = word.english_word;
+        randomWord = word.english;
+        randomTranslation = word.korean;
 
         const guess = new ButtonBuilder()
             .setCustomId('guess')
@@ -104,7 +79,7 @@ const openGuessPrompt = async (interaction) => {
     const guessInput= new TextInputBuilder()
         .setCustomId('guessInput')
         // The label is the prompt the user sees for this input
-        .setLabel(`What is the Korean translation of ${randomWord}?`)
+        .setLabel(`What is the translation of ${randomWord}?`)
         // Short means only a single line of text
         .setStyle(TextInputStyle.Short);
 
@@ -123,12 +98,12 @@ const isCorrectGuess = async (interaction) => {
     if (interaction.user.bot) return;
     
     const guess = interaction.fields.fields.get('guessInput').value;
-    const guestLower = guess.toLowerCase();
-    const translation = await Word.find({ korean_word: randomWord });
+    const guessLower = guess.toLowerCase();
+    const translation = await Word.find({ english: randomWord });
 
     for (let i = 0; i < translation.length; i++) {
         // check if it is english_word or in the array eng_allows
-        if (guestLower === translation[i].english_word.toLowerCase() || translation[i].eng_allows.includes(guestLower)) {
+        if (guessLower === translation[i].korean.toLowerCase()) {
             var user = await User.findOne({ discordId: interaction.user.id });
 
             if (!user) {
@@ -149,7 +124,7 @@ const isCorrectGuess = async (interaction) => {
             await buttonDisable();
             
             return interaction.reply({
-                content: `${interaction.user} knows that ${randomWord} means ${randomTranslation} and now has ${user.koreanPoints} points!`,
+                content: `${interaction.user} knows that ${randomWord} in Korean is ${randomTranslation} and now has ${user.koreanPoints} points!`,
             });
         }
     }
@@ -377,7 +352,6 @@ module.exports = {
     quizCooldownHandler,
     quizCooldownJob,
     newQuizWord,
-    newQuizWordInteraction,
     openGuessPrompt,
     isCorrectGuess,
 }
